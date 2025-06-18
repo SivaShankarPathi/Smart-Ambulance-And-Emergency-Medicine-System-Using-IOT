@@ -1,0 +1,292 @@
+ #include <DFRobot_MAX30102.h>
+
+                                                                                                                                                                                                                                              //DAS FIRE HUMIDITY GAS MQ135 INDIVIDUAL THRESH HOLD POINTS AND SMS 
+#include <DFRobot_MAX30102.h>
+#include<LiquidCrystal.h>
+//#include<SoftwareSerial.h>
+
+DFRobot_MAX30102 particleSensor;
+//SoftwareSerial Serial1(9,10);
+LiquidCrystal lcd(12,11,2,3,4,5);
+
+int j=0,x,y,z,x1,y1,z1,ntimes=0;
+const int bzr=A2;
+const int s1=A1;
+const int snt=A5;
+
+int32_t SPO2; //SPO2
+int8_t SPO2Valid; //Flag to display if SPO2 calculation is valid
+int32_t heartRate; //Heart-rate
+int8_t heartRateValid; //Flag to display if heart-rate calculation is valid 
+
+
+String h_level_string = "";
+String t_level_string = "";
+String p_level_string = "";
+String ApiKey = "MDOBOP32FKIMZCSU";
+String field1 = "&field1=";
+String field2 = "&field2=";
+String field3 = "&field3=";
+
+
+void setup() 
+{
+pinMode(bzr,OUTPUT);
+pinMode(s1,INPUT);
+pinMode(snt,OUTPUT);
+digitalWrite(bzr,0);
+digitalWrite(s1,1);
+
+lcd.begin(16,2);
+Serial.begin(9600);
+delay(500);
+Serial.begin(115200);
+delay(500);
+lcd.clear();
+lcd.setCursor(0,0);  
+lcd.print("IOT/GSM  HEALTH ");
+lcd.setCursor(0,1);  
+lcd.print("MONITORING SYS. ");
+delay(2000);
+digitalWrite(bzr,0);
+  while (!particleSensor.begin()) 
+  {
+    lcd.clear();
+    lcd.setCursor(0,0);  
+    lcd.print("MAX301O2 NOT    ");
+    lcd.setCursor(0,1);  
+    lcd.print("FOUND..PL.CHECK ");
+     delay(3000);
+  }
+
+    lcd.clear();
+    lcd.setCursor(0,0);  
+    lcd.print("MAX301O2 FOUND  ");
+    lcd.setCursor(0,1);  
+    lcd.print("     OK         ");
+    
+    particleSensor.sensorConfiguration(/*ledBrightness=*/50, /*sampleAverage=*/SAMPLEAVG_4, \
+                        /*ledMode=*/MODE_MULTILED, /*sampleRate=*/SAMPLERATE_100, \
+                      /*pulseWidth=*/PULSEWIDTH_411, /*adcRange=*/ADCRANGE_16384);
+
+    delay(3000);
+    
+    }
+
+
+//---------------------------
+
+void loop() 
+{
+  
+  delay(1000);
+    
+   
+    for(j=0;j<2;j++)
+  {
+   particleSensor.heartrateAndOxygenSaturation(/**SPO2=*/&SPO2, /**SPO2Valid=*/&SPO2Valid, /**heartRate=*/&heartRate, /**heartRateValid=*/&heartRateValid);
+  //Print result 
+  x=analogRead(4);
+  x1=map(x,0,1023,0,255);
+  x1=x1+76-45; 
+   y=(heartRateValid);
+  z=(SPO2Valid);
+  y1=(heartRate);
+  z1=(SPO2);
+  y1=((y1/10)+70);
+  z1=((z1/10)+85);
+  
+  
+  lcd.clear();
+  lcd.setCursor(0,0);  
+  lcd.print("H.B:      T:    ");   
+  lcd.setCursor(0,1);  
+  lcd.print("SPO2:           ");
+  
+  if(y==1)
+  
+  {
+  lcd.setCursor(4,0);  
+  lcd.print(y1);
+  }
+  if(z==1)
+    {
+    lcd.setCursor(5,1);  
+    lcd.print(z1);
+    }
+  if(y==0)
+   {
+    y1=0;
+   }
+  if(z==0)
+   {
+    z1=0;
+   }
+  
+  lcd.setCursor(13,0);
+  lcd.print(x1);
+  
+  lcd.setCursor(13,1);
+  lcd.println(heartRateValid,DEC);
+  lcd.setCursor(14,1);
+  lcd.println("-");
+  lcd.setCursor(15,1);
+  lcd.println(SPO2Valid, DEC);
+  delay(1000);  
+  //-------------------------------
+   h_level_string = String (z1) ;
+   t_level_string = String (y1) ;
+   p_level_string = String (x1) ;        
+   }
+  
+ 
+  if(x1>103)
+  {
+ delay(1000);  
+ lcd.clear();
+ lcd.setCursor(0,0);  
+ lcd.print("SENDING SMS..");   
+ lcd.setCursor(0,1);  
+ lcd.print("temp. IS HIGH   ");
+ digitalWrite(bzr,1);
+ 
+ sendSMS();
+ digitalWrite(bzr,0);
+ delay(1000);
+ 
+  }
+
+ if(digitalRead(s1)==0)
+  {
+ delay(1000);  
+ lcd.clear();
+ lcd.setCursor(0,0);  
+ lcd.print("SENDING SMS..   ");   
+ lcd.setCursor(0,1);  
+ lcd.print("panic DETECTED. ");
+ digitalWrite(bzr,1);
+ sendSMS();
+ digitalWrite(bzr,0);
+ delay(1000);
+  }
+  post();
+  delay(700);
+  //-------------------
+  ntimes=ntimes+1;
+ 
+  if(ntimes==5)
+   {
+ lcd.clear();
+ lcd.setCursor(0,0);  
+ lcd.print("please take..   ");   
+ lcd.setCursor(0,1);  
+ lcd.print("PARACITOMAL-650 ");
+ digitalWrite(bzr,1);
+ delay(5000);
+ digitalWrite(bzr,0);
+   }
+  if(ntimes==10)
+   {
+ lcd.clear();
+ lcd.setCursor(0,0);  
+ lcd.print("please take..   ");   
+ lcd.setCursor(0,1);  
+ lcd.print("DART-100Mg      ");
+ digitalWrite(bzr,1);
+ delay(5000);
+ digitalWrite(bzr,0);
+   }
+
+    if(ntimes==15)
+   {
+ lcd.clear();
+ lcd.setCursor(0,0);  
+ lcd.print("SANITIZER       ");   
+ lcd.setCursor(0,1);  
+ lcd.print("SPRAYING...     ");
+ digitalWrite(snt,1);
+ delay(2000);
+ digitalWrite(snt,0);
+ ntimes=0;
+   }
+
+ 
+  }
+ 
+
+
+// ***********  SUB FUNCTIONS *****************
+void post()
+{
+  String cmd = "AT+CIPSTART=\"TCP\",\"";
+  cmd += "184.106.153.149"; // api.thingspeak.com
+  cmd += "\",80";
+  Serial.println(cmd);
+
+
+  if(Serial.find((char*)"ERROR"))
+  {
+  //Serial.println("AT+CIPSTART error");
+  
+  return;
+  }
+  delay(100);
+
+
+  //------------------------add fields--------------------
+  
+  String getStr = "GET /update?api_key=";     
+  getStr += ApiKey;
+  getStr += field1;
+  getStr += h_level_string;
+  
+  getStr += field2;
+  getStr += t_level_string;
+  
+  getStr += field3;
+  getStr += p_level_string;
+ 
+  
+  getStr += "\r\n\r\n";
+ // Serial.print(getStr);
+  cmd = "AT+CIPSEND=";
+  cmd += String(getStr.length());
+  
+  //cmd += String(str.length());
+  Serial.println(cmd);
+  
+  if(Serial.find('>'))
+  {
+  Serial.print(getStr);
+  //Serial1.print(str);
+    
+  delay(2000);
+  }
+}
+void sendSMS()
+{
+  for(j=0;j<2;j++)
+  {
+  Serial.print("AT+CMGF=1\r");                                                        // AT command to send SMS message
+  delay(2000);
+  if(j==0)
+  {
+  Serial.println("AT+CMGS=\"+917989805424\"");  // recipient's mobile number, in international format
+  }
+  if(j==1)
+  {
+  Serial.println("AT+CMGS=\"+919014762609\"");
+  }
+  delay(2000);
+  Serial.print("PERSON REQUIRES HEALTH ASSISTENSE : TEMPERATURE:");        // message to send
+  Serial.println (x1);
+  Serial.print(" SPo2: ");        // message to send
+  Serial.println (SPO2Valid);
+  Serial.print(" HEART RATE: ");        // message to send
+  Serial.println (heartRateValid);
+  delay(2000);
+  Serial.println((char)26);                     
+  delay(2000); 
+  Serial.println();
+  delay(2000);
+}}
